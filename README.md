@@ -4,7 +4,7 @@
 
 # Задание 0. Вводное.
 
-[![Build Status](https://app.travis-ci.com/GPGPUCourse/GPGPUTasks2021.svg?branch=task00)](https://app.travis-ci.com/GPGPUCourse/GPGPUTasks2021)
+[![Build Status](https://github.com/GPGPUCourse/GPGPUTasks2021/actions/workflows/cmake.yml/badge.svg?branch=task00&event=push)](https://github.com/GPGPUCourse/GPGPUTasks2021/actions/workflows/cmake.yml)
 
 Установка OpenCL-драйвера для процессора
 ========================================

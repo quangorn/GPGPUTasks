@@ -31,14 +31,113 @@ void reportError(cl_int err, const std::string &filename, int line) {
 
 #define OCL_SAFE_CALL(expr) reportError(expr, __FILE__, __LINE__)
 
+void printDeviceStringParam(cl_device_id device_id, cl_device_info info, const std::string& paramName) {
+    size_t paramValueSize = 0;
+    OCL_SAFE_CALL(clGetDeviceInfo(device_id, info, 0, nullptr, &paramValueSize));
+    std::vector<unsigned char> paramValue(paramValueSize, 0);
+    OCL_SAFE_CALL(clGetDeviceInfo(device_id, info, paramValueSize, paramValue.data(), nullptr));
+    std::cout << "        Device " << paramName << ": " << paramValue.data() << std::endl;
+}
+
+void printDeviceNumericParam(cl_device_id device_id, cl_device_info info, const std::string& paramName) {
+    uint64_t paramValue = 0;
+    OCL_SAFE_CALL(clGetDeviceInfo(device_id, info, sizeof(size_t), &paramValue, nullptr));
+    std::cout << "        Device " << paramName << ": " << paramValue << std::endl;
+}
+
+std::string getDeviceTypeName(uint64_t type) {
+    switch (type) {
+        case CL_DEVICE_TYPE_DEFAULT:
+            return "default";
+        case CL_DEVICE_TYPE_CPU:
+            return "cpu";
+        case CL_DEVICE_TYPE_GPU:
+            return "gpu";
+        case CL_DEVICE_TYPE_ACCELERATOR:
+            return "accelerator";
+        case CL_DEVICE_TYPE_ALL:
+            return "all";
+        default:
+            return "unknown";
+    }
+}
+
+uint64_t getDeviceType(cl_device_id device_id) {
+    uint64_t type = CL_DEVICE_TYPE_DEFAULT;
+    OCL_SAFE_CALL(clGetDeviceInfo(device_id, CL_DEVICE_TYPE, sizeof(uint64_t), &type, nullptr));
+    return type;
+}
+
+bool findDevice(bool useGpu, cl_platform_id& foundPlatform, cl_device_id& foundDevice) {
+    cl_uint platformsCount = 0;
+    OCL_SAFE_CALL(clGetPlatformIDs(0, nullptr, &platformsCount));
+    std::cout << "Number of OpenCL platforms: " << platformsCount << std::endl;
+
+    std::vector<cl_platform_id> platforms(platformsCount);
+    OCL_SAFE_CALL(clGetPlatformIDs(platformsCount, platforms.data(), nullptr));
+
+    bool deviceIsFound = false;
+    for (int platformIndex = 0; platformIndex < platformsCount; ++platformIndex) {
+        std::cout << "Platform #" << (platformIndex + 1) << "/" << platformsCount << std::endl;
+        cl_platform_id platform = platforms[platformIndex];
+
+        size_t platformNameSize = 0;
+        OCL_SAFE_CALL(clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, nullptr, &platformNameSize));
+        std::vector<unsigned char> platformName(platformNameSize, 0);
+        OCL_SAFE_CALL(clGetPlatformInfo(platform, CL_PLATFORM_NAME, platformNameSize, platformName.data(), nullptr));
+        std::cout << "    Platform name: " << platformName.data() << std::endl;
+
+        size_t platformVendorSize = 0;
+        OCL_SAFE_CALL(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 0, nullptr, &platformVendorSize));
+        std::vector<unsigned char> platformVendor(platformVendorSize, 0);
+        OCL_SAFE_CALL(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, platformVendorSize, platformVendor.data(), nullptr));
+        std::cout << "    Platform vendor: " << platformVendor.data() << std::endl;
+
+        cl_uint devicesCount = 0;
+        OCL_SAFE_CALL(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, nullptr, &devicesCount));
+        std::vector<cl_device_id> devices(devicesCount, 0);
+        OCL_SAFE_CALL(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, devicesCount, devices.data(), nullptr));
+
+        for (int deviceIndex = 0; deviceIndex < devicesCount; ++deviceIndex) {
+            std::cout << "    Device #" << deviceIndex << "/" << devicesCount << std::endl;
+            cl_device_id device = devices[deviceIndex];
+            printDeviceStringParam(device, CL_DEVICE_NAME, "name");
+            auto type = getDeviceType(device);
+            std::cout << "        Device type: " << getDeviceTypeName(type) << std::endl;
+            if ((useGpu && type == CL_DEVICE_TYPE_GPU) || (!useGpu && type == CL_DEVICE_TYPE_CPU)) {
+                foundPlatform = platform;
+                foundDevice = device;
+                deviceIsFound = true;
+            }
+            printDeviceStringParam(device, CL_DEVICE_VENDOR, "vendor");
+            printDeviceStringParam(device, CL_DEVICE_VERSION, "version");
+            printDeviceStringParam(device, CL_DEVICE_OPENCL_C_VERSION, "opencl_c_version");
+            printDeviceNumericParam(device, CL_DEVICE_AVAILABLE, "available");
+            printDeviceNumericParam(device, CL_DEVICE_GLOBAL_MEM_SIZE, "global memory size");
+            printDeviceNumericParam(device, CL_DEVICE_LOCAL_MEM_SIZE, "local memory size");
+            printDeviceNumericParam(device, CL_DEVICE_MAX_COMPUTE_UNITS, "max compute units");
+            printDeviceNumericParam(device, CL_DEVICE_ADDRESS_BITS, "address bits");
+            printDeviceNumericParam(device, CL_DEVICE_MAX_CLOCK_FREQUENCY, "max clock");
+        }
+    }
+
+    return deviceIsFound;
+}
 
 int main() {
     // Пытаемся слинковаться с символами OpenCL API в runtime (через библиотеку clew)
-    if (!ocl_init())
+    if (!ocl_init()) {
         throw std::runtime_error("Can't init OpenCL driver!");
+    }
 
     // TODO 1 По аналогии с предыдущим заданием узнайте, какие есть устройства, и выберите из них какое-нибудь
     // (если в списке устройств есть хоть одна видеокарта - выберите ее, если нету - выбирайте процессор)
+    bool useGpu = true;
+    cl_platform_id platform;
+    cl_device_id device;
+    if (!findDevice(useGpu, platform, device)) {
+        throw std::runtime_error("Can't find device");
+    }
 
     // TODO 2 Создайте контекст с выбранным устройством
     // См. документацию https://www.khronos.org/registry/OpenCL/sdk/1.2/docs/man/xhtml/ -> OpenCL Runtime -> Contexts -> clCreateContext

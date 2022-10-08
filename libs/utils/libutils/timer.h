@@ -126,7 +126,7 @@ protected:
         std::vector<double> laps = laps_;
         std::sort(laps.begin(), laps.end());
 
-        unsigned int nlaps = laps.size();
+        auto nlaps = laps.size();
         if (nlaps >= 5) {
             // Removing last 20% of measures
             laps.erase(laps.end() - nlaps/5, laps.end());

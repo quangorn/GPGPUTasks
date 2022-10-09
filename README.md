@@ -48,7 +48,7 @@
 Задание 3.1. Фрактал Мандельброта
 =========
 
-![Mandelbrot](/.figures/mandelbrot.png?raw=true)
+[//]: ![Mandelbrot](/.figures/mandelbrot.png?raw=true)
 
 Реализуйте расчет фрактала Мандельброта на OpenCL - см. ```src/main_mandelbrot.cpp``` и ```src/cl/mandelbrot.cl```.
 

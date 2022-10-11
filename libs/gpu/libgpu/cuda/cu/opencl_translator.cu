@@ -12,6 +12,7 @@
 #define work_group_size_hint(X, Y, Z)
 #define reqd_work_group_size(X, Y, Z)
 
+#define __attribute__(X)
 #define __kernel __global__
 #define __global
 #define __local __shared__
